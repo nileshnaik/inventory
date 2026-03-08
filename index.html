@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PCB Laminate Inventory</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -14,7 +13,6 @@
   --surface: #ffffff;
   --surface2: #f7f8fa;
   --border: #dde1e9;
-  --border2: #c8cdd8;
   --accent: #1a56db;
   --accent-light: #e8eefb;
   --red: #e02424;
@@ -35,7 +33,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-/* HEADER */
 .header { background: var(--accent); padding: 14px 16px 12px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .brand { display: flex; align-items: center; gap: 10px; }
@@ -48,22 +45,23 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .nav-tab .ti { font-size: 15px; }
 .nav-tab.active { background: rgba(255,255,255,0.22); color: #fff; }
 
-/* PAGES */
+.status-bar { padding: 8px 16px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.status-bar.synced  { background: #f0fdf4; color: #065f46; border-bottom: 1px solid #bbf7d0; }
+.status-bar.syncing { background: #eff6ff; color: #1e40af; border-bottom: 1px solid #bfdbfe; }
+.status-bar.error   { background: var(--yellow-light); color: #92400e; border-bottom: 1px solid #fcd34d; }
+
 .page { display: none; padding: 16px; }
 .page.active { display: block; }
 
-/* CARDS */
 .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
 .card-hdr { padding: 14px 16px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
 
-/* SCANNER */
 .scanner-wrap { padding: 16px; text-align: center; }
 #reader { width: 100%; max-width: 300px; margin: 0 auto 14px; border-radius: 10px; overflow: hidden; border: 2px solid var(--border); background: #111; min-height: 180px; display: flex; align-items: center; justify-content: center; }
 #reader video { width: 100% !important; }
 #reader img { display: none !important; }
 .scan-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted2); padding: 30px 0; }
 .scan-idle .si-icon { font-size: 36px; }
-.scan-idle p { font-size: 13px; }
 
 .primary-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 20px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.18s; width: 100%; max-width: 300px; }
 .primary-btn:active { transform: scale(0.97); opacity: 0.9; }
@@ -72,7 +70,6 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .or-div { display: flex; align-items: center; gap: 10px; padding: 4px 16px 12px; font-size: 12px; color: var(--muted2); }
 .or-div::before, .or-div::after { content:''; flex:1; height:1px; background:var(--border); }
 
-/* SEARCH */
 .search-wrap { padding: 0 16px 16px; }
 .flbl { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .txt-in { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 15px; outline: none; transition: border 0.18s; }
@@ -87,19 +84,16 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .dd-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .dd-qty { font-size: 13px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
 
-/* ITEM CARD */
 .item-card { display: none; }
 .item-card.visible { display: block; }
 .ic-hdr { padding: 16px 16px 0; }
 .ic-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
 .ic-sub { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
 
-/* STOCK DISPLAY — operator sees PANELS as primary */
 .stock-display { padding: 16px; }
 .stock-main { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; padding: 20px 20px 16px; text-align: center; margin-bottom: 10px; }
 .stock-main.critical { border-color: var(--red); background: var(--red-light); }
 .stock-main.warning  { border-color: #fcd34d; background: var(--yellow-light); }
-
 .panel-count-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
 .panel-count { font-size: 58px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; line-height: 1; }
 .stock-main.ok       .panel-count { color: var(--green); }
@@ -107,27 +101,20 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .stock-main.critical .panel-count { color: var(--red); }
 .panel-count-unit { font-size: 14px; font-weight: 600; color: var(--muted); margin-top: 4px; }
 .full-sheet-equiv { font-size: 12px; color: var(--muted2); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; }
-
 .stock-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .stock-mini { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
 .stock-mini .sm-val { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
 .stock-mini .sm-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; font-weight: 600; }
-.stock-mini .sm-sub { font-size: 10px; color: var(--muted2); margin-top: 1px; }
 
-/* REMOVE SECTION */
-.remove-sec { padding: 0 16px 16px; }
-
-/* Mode toggle: Remove / Add */
-.mode-toggle { display: flex; gap: 0; margin-bottom: 14px; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+.update-sec { padding: 0 16px 16px; }
+.mode-toggle { display: flex; margin-bottom: 14px; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
 .mode-btn { flex: 1; padding: 11px; border: none; background: var(--surface2); color: var(--muted); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.18s; }
 .mode-btn:first-child { border-right: 1px solid var(--border); }
 .mode-btn.active-remove { background: var(--red-light); color: var(--red); }
 .mode-btn.active-add    { background: var(--green-light); color: var(--green); }
 
-/* Quick-tap presets */
 .presets { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-bottom: 12px; }
 .preset-btn { padding: 12px 4px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text2); font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s; }
-.preset-btn:active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 .preset-btn.sel { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 
 .qty-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -135,25 +122,21 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .qty-step:active { background: var(--border); transform: scale(0.9); }
 .qty-in { flex: 1; text-align: center; padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface2); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 700; outline: none; }
 .qty-in:focus { border-color: var(--accent); background: #fff; }
-
 .qty-hint { font-size: 11px; color: var(--muted2); text-align: center; margin-bottom: 14px; }
 
 .confirm-btn { width: 100%; padding: 16px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.18s; }
 .confirm-btn:active { transform: scale(0.98); opacity: 0.9; }
+.confirm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .confirm-btn.add-mode { background: var(--green); }
 
-/* STOCK LIST PAGE */
 .alert-bar { background: var(--red-light); border: 1.5px solid #f8b4b4; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; display: none; }
 .alert-bar.visible { display: block; }
 .ab-title { color: var(--red); font-weight: 700; font-size: 13px; margin-bottom: 6px; }
 .ab-body { font-size: 13px; color: #9b1c1c; line-height: 1.7; }
-
 .sec-hdr { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; }
-
 .stock-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow); }
 .stock-item.critical { border-color: #f8b4b4; background: #fff8f8; }
 .stock-item.warning  { border-color: #fcd34d; background: #fffdf0; }
-
 .si-row { display: flex; justify-content: space-between; align-items: center; }
 .si-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
 .si-meta { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
@@ -164,13 +147,11 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .si-panels.ok       { color: var(--green); }
 .si-panels-lbl { font-size: 11px; color: var(--muted); }
 .si-sheets { font-size: 11px; color: var(--muted2); font-family: 'IBM Plex Mono', monospace; margin-top: 1px; }
-
 .si-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 .badge-ok   { background: var(--green-light); color: var(--green); }
 .badge-warn { background: var(--yellow-light); color: var(--yellow); }
 .badge-crit { background: var(--red-light); color: var(--red); }
 
-/* LOG */
 .log-row { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .log-row:last-child { border-bottom: none; }
 .log-name { font-size: 13px; font-weight: 500; }
@@ -179,10 +160,8 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .log-rm.remove { color: var(--red); }
 .log-rm.add    { color: var(--green); }
 
-/* ADMIN */
 .admin-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; box-shadow: var(--shadow); overflow: hidden; }
 .adm-hdr { padding: 14px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-.adm-hdr:active { background: var(--surface2); }
 .adm-hdr-name { font-size: 13px; font-weight: 600; }
 .adm-hdr-meta { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
 .chevron { color: var(--muted2); transition: transform 0.2s; font-size: 12px; }
@@ -195,20 +174,17 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .adm-f input, .adm-f select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 14px; outline: none; }
 .adm-f select { font-family: 'IBM Plex Sans', sans-serif; }
 .adm-f input:focus, .adm-f select:focus { border-color: var(--accent); background: #fff; }
-.adm-note { font-size: 11px; color: var(--muted2); margin-top: 10px; line-height: 1.5; background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
-
 .save-btn { margin-top: 12px; width: 100%; padding: 11px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
 .del-btn  { margin-top: 8px; width: 100%; padding: 11px; border: 1.5px solid #f8b4b4; border-radius: 8px; background: transparent; color: var(--red); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
-.add-btn  { width: 100%; padding: 14px; border: 2px dashed var(--border2); border-radius: var(--radius); background: transparent; color: var(--muted); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
-.export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text2); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow); }
+.add-btn  { width: 100%; padding: 14px; border: 2px dashed var(--border); border-radius: var(--radius); background: transparent; color: var(--muted); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+.export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text2); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow); }
+.sync-btn { width: 100%; padding: 12px; border: 1.5px solid #bbf7d0; border-radius: 10px; background: var(--green-light); color: var(--green); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
-/* TOAST */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1f2937; color: #fff; padding: 12px 22px; border-radius: 50px; font-size: 13px; font-weight: 600; z-index: 999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; max-width: 90vw; text-align: center; box-shadow: var(--shadow-md); }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.err { background: var(--red); }
 .toast.wrn { background: #92400e; }
 .toast.ok  { background: var(--green); }
-
 .empty { text-align: center; padding: 30px 16px; color: var(--muted2); font-size: 13px; }
 </style>
 </head>
@@ -220,7 +196,7 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
       <div class="brand-icon">⬛</div>
       <div>
         <h1>PCB Laminate Inventory</h1>
-        <p id="headerSub">Initialising…</p>
+        <p id="headerSub">Loading…</p>
       </div>
     </div>
     <div class="header-date" id="headerDate"></div>
@@ -232,12 +208,10 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
   </div>
 </div>
 
-<!-- ══ UPDATE PAGE (scan + remove/add) ══ -->
+<div id="statusBar" class="status-bar syncing">⏳ Connecting to Google Sheets…</div>
+
+<!-- UPDATE PAGE -->
 <div class="page active" id="page-scan">
-
-  <!-- Connection status banner -->
-  <div id="connectionBanner" style="display:none;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;"></div>
-
   <div class="card">
     <div class="card-hdr">Scan QR / Barcode</div>
     <div class="scanner-wrap">
@@ -257,15 +231,11 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
     </div>
   </div>
 
-  <!-- Item panel -->
   <div class="card item-card" id="itemCard">
     <div class="ic-hdr">
       <div class="ic-name" id="ic-name">—</div>
       <div class="ic-sub" id="ic-sub">—</div>
-      <div id="modeIndicator" style="font-size:11px;margin-top:5px;font-family:'IBM Plex Mono',monospace;"></div>
     </div>
-
-    <!-- Big panel count display -->
     <div class="stock-display">
       <div class="stock-main ok" id="stockMain">
         <div class="panel-count-label">Cut Panels in Stock</div>
@@ -276,26 +246,19 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
       <div class="stock-row">
         <div class="stock-mini">
           <div class="sm-val" id="sm-critical" style="color:var(--red)">—</div>
-          <div class="sm-lbl">Critical</div>
-          <div class="sm-sub">cut panels</div>
+          <div class="sm-lbl">Critical Level</div>
         </div>
         <div class="stock-mini">
           <div class="sm-val" id="sm-reorder" style="color:var(--muted)">—</div>
-          <div class="sm-lbl">Reorder</div>
-          <div class="sm-sub">cut panels</div>
+          <div class="sm-lbl">Reorder Qty</div>
         </div>
       </div>
     </div>
-
-    <div class="remove-sec">
-
-      <!-- Remove / Add toggle -->
+    <div class="update-sec">
       <div class="mode-toggle">
         <button class="mode-btn active-remove" id="modeRemove" onclick="setMode('remove')">− Remove Panels</button>
-        <button class="mode-btn" id="modeAdd"    onclick="setMode('add')">+ Add to Stock</button>
+        <button class="mode-btn" id="modeAdd" onclick="setMode('add')">+ Add to Stock</button>
       </div>
-
-      <!-- Quick presets -->
       <div class="flbl">Quick select</div>
       <div class="presets">
         <button class="preset-btn" onclick="setPreset(1)">1</button>
@@ -303,22 +266,19 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
         <button class="preset-btn" onclick="setPreset(4)">4</button>
         <button class="preset-btn" onclick="setPreset(10)">10</button>
       </div>
-
       <div class="flbl">Or enter quantity</div>
       <div class="qty-row">
         <button class="qty-step" onclick="adj(-1)">−</button>
         <input type="number" class="qty-in" id="removeQty" value="1" min="1" step="1">
         <button class="qty-step" onclick="adj(1)">+</button>
       </div>
-      <div class="qty-hint" id="qtyHint">1 panel = ½ sheet · 2 panels = 1 full sheet</div>
-
+      <div class="qty-hint">1 panel = ½ sheet · 2 panels = 1 full sheet</div>
       <button class="confirm-btn" id="confirmBtn" onclick="confirmAction()">✓ Confirm Removal</button>
     </div>
   </div>
-
 </div>
 
-<!-- ══ STOCK PAGE ══ -->
+<!-- STOCK PAGE -->
 <div class="page" id="page-stock">
   <div class="alert-bar" id="alertBar">
     <div class="ab-title">⚠️ Low Stock — Order Required</div>
@@ -333,9 +293,10 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
   <div class="card" id="logCard" style="padding:0"><div class="empty">No transactions yet</div></div>
 </div>
 
-<!-- ══ ADMIN PAGE ══ -->
+<!-- ADMIN PAGE -->
 <div class="page" id="page-admin">
-  <button class="export-btn" onclick="exportCSV()">📥 Export to CSV (open in Excel)</button>
+  <button class="sync-btn" onclick="forceSync()">🔄 Force Sync with Google Sheets</button>
+  <button class="export-btn" onclick="exportCSV()">📥 Export to CSV</button>
   <div class="sec-hdr">Manage Inventory Items</div>
   <div id="adminList"></div>
   <button class="add-btn" onclick="addItem()">+ Add New Laminate</button>
@@ -344,217 +305,9 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 <div class="toast" id="toast"></div>
 
 <script>
-// ═════════════════════════════════════════════════════════════════════════════
-// MICROSOFT GRAPH CONFIGURATION
-// ═════════════════════════════════════════════════════════════════════════════
-const GRAPH_CONFIG = {
-  clientId:   'fac5c094-5cfc-4c16-a02c-693a056b543e',
-  tenantId:   '80ca80e8-4aea-44f7-884f-45e91c3b5fd3',
-  siteHost:   '5daypcbs.sharepoint.com',
-  sitePath:   '/sites/eaglecircuitsteamsite',
-  filePath:   '/Shared Documents/Inventory Management System/PCB_Laminate_Inventory.xlsx',
-  alertEmail: 'nsnaik@eaglecircuits.com',
-};
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW5d9w8dv1e1bi7XpmOhgBTriqQPMojoESX9LQ3sM6HchAkJ39r32HJmdtJt1j2v9h/exec';
 
-// MSAL setup
-const msalApp = new msal.PublicClientApplication({
-  auth: {
-    clientId: GRAPH_CONFIG.clientId,
-    authority: `https://login.microsoftonline.com/${GRAPH_CONFIG.tenantId}`,
-    redirectUri: 'https://nileshnaik.github.io/inventory/',
-  },
-  cache: { cacheLocation: 'sessionStorage' }
-});
-
-const GRAPH_SCOPES = ['Files.ReadWrite', 'Sites.ReadWrite.All', 'User.Read', 'Mail.Send'];
-
-let graphToken = null;
-let workbookSessionId = null;
-let graphFileId = null;
-
-async function getToken() {
-  // Try silent first
-  const accounts = msalApp.getAllAccounts();
-  if (accounts.length > 0) {
-    try {
-      const res = await msalApp.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: accounts[0] });
-      graphToken = res.accessToken;
-      return graphToken;
-    } catch(e) {}
-  }
-  // Popup login
-  try {
-    const res = await msalApp.acquireTokenPopup({ scopes: GRAPH_SCOPES });
-    graphToken = res.accessToken;
-    return graphToken;
-  } catch(e) {
-    return null;
-  }
-}
-
-async function graphFetch(url, opts={}) {
-  const token = graphToken || await getToken();
-  if (!token) return null;
-  const res = await fetch('https://graph.microsoft.com/v1.0' + url, {
-    ...opts,
-    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers||{}) }
-  });
-  if (res.status === 401) { graphToken = null; return null; }
-  if (!res.ok) return null;
-  if (res.status === 204) return true;
-  return res.json();
-}
-
-async function getFileId() {
-  if (graphFileId) return graphFileId;
-  const siteRes = await graphFetch(`/sites/${GRAPH_CONFIG.siteHost}:${GRAPH_CONFIG.sitePath}`);
-  if (!siteRes) return null;
-  const siteId = siteRes.id;
-  const fileRes = await graphFetch(`/sites/${siteId}/drive/root:${GRAPH_CONFIG.filePath}`);
-  if (!fileRes) return null;
-  graphFileId = { siteId, driveId: fileRes.parentReference.driveId, itemId: fileRes.id };
-  return graphFileId;
-}
-
-async function graphGetStock() {
-  try {
-    const f = await getFileId();
-    if (!f) return null;
-    const base = `/drives/${f.driveId}/items/${f.itemId}/workbook/tables/InventoryTable/rows`;
-    const rows = await graphFetch(base);
-    if (!rows || !rows.value) return null;
-    // values[0]=ItemID,[1]=Name,[2]=Mfg,[3]=Thickness,[4]=Copper,[5]=Barcode,[6]=PanelCount,[7]=CriticalLevel,[8]=ReorderQty
-    return rows.value.map(r => ({
-      id:             r.values[0][0],
-      name:           r.values[0][1],
-      mfg:            r.values[0][2],
-      thickness:      r.values[0][3],
-      copper:         r.values[0][4],
-      barcode:        r.values[0][5],
-      panels:         parseInt(r.values[0][6]) || 0,
-      criticalPanels: parseInt(r.values[0][7]) || 0,
-      reorderPanels:  parseInt(r.values[0][8]) || 0,
-      _rowIndex:      rows.value.indexOf(r),
-    }));
-  } catch { return null; }
-}
-
-async function graphUpdateRow(item, newTotal) {
-  try {
-    const f = await getFileId();
-    if (!f) return false;
-    // Find row index by ItemID
-    const rows = await graphFetch(`/drives/${f.driveId}/items/${f.itemId}/workbook/tables/InventoryTable/rows`);
-    if (!rows) return false;
-    const rowIdx = rows.value.findIndex(r => r.values[0][0] === item.id);
-    if (rowIdx < 0) return false;
-    // Patch just the PanelCount column (index 6)
-    const existing = rows.value[rowIdx].values[0];
-    existing[6] = newTotal;
-    const patchRes = await graphFetch(
-      `/drives/${f.driveId}/items/${f.itemId}/workbook/tables/InventoryTable/rows/itemAt(index=${rowIdx})`,
-      { method: 'PATCH', body: JSON.stringify({ values: [existing] }) }
-    );
-    return !!patchRes;
-  } catch { return false; }
-}
-
-async function graphAppendTransaction(item, action, qty, newTotal) {
-  try {
-    const f = await getFileId();
-    if (!f) return false;
-    const now = new Date().toISOString();
-    await graphFetch(
-      `/drives/${f.driveId}/items/${f.itemId}/workbook/tables/TransactionTable/rows`,
-      { method: 'POST', body: JSON.stringify({ values: [[now, item.id, item.name, action, qty, newTotal]] }) }
-    );
-    return true;
-  } catch { return false; }
-}
-
-async function graphSendAlert(item, newTotal) {
-  try {
-    const token = graphToken || await getToken();
-    if (!token) return;
-    await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: `⚠️ Low Stock Alert: ${item.name}`,
-          body: { contentType: 'Text', content: `Low stock alert for ${item.name}.\n\nCurrent stock: ${newTotal} cut panels\nCritical level: ${item.criticalPanels} panels\nPlease reorder ${item.reorderPanels} panels.\n\n— Eagle Circuits Inventory System` },
-          toRecipients: [{ emailAddress: { address: GRAPH_CONFIG.alertEmail } }]
-        }
-      })
-    });
-  } catch {}
-}
-
-// Combined update: patch row + log transaction + maybe alert
-async function graphUpdate(item, action, qty, newTotal) {
-  const updated = await graphUpdateRow(item, newTotal);
-  if (updated) {
-    await graphAppendTransaction(item, action, qty, newTotal);
-    if (newTotal <= item.criticalPanels) await graphSendAlert(item, newTotal);
-  }
-  return updated;
-}
-
-let graphReady = false;
-
-function withTimeout(promise, ms) {
-  return Promise.race([promise, new Promise((_,r) => setTimeout(() => r(new Error('timeout')), ms))]);
-}
-
-async function initGraph() {
-  try {
-    await withTimeout(msalApp.initialize(), 5000);
-  } catch(e) { console.warn('MSAL init timed out:', e); updateBanner('offline'); return; }
-
-  try { await msalApp.handleRedirectPromise(); } catch(e) {}
-
-  let token = null;
-  try { token = await withTimeout(getToken(), 10000); } catch(e) { console.warn('getToken timed out'); }
-
-  if (token) {
-    graphReady = true;
-    updateBanner('live');
-    try {
-      const liveInv = await graphGetStock();
-      if (liveInv && liveInv.length) {
-        inv = liveInv;
-        save();
-        const cc = inv.filter(i=>getStatus(i)==='critical').length;
-        document.getElementById('headerSub').textContent = cc ? `⚠ ${cc} item${cc>1?'s':''} need ordering` : `${inv.length} SKUs tracked`;
-        renderStock();
-      }
-    } catch(e) { console.warn('SharePoint sync error', e); }
-  } else {
-    updateBanner('offline');
-  }
-}
-
-function updateBanner(mode) {
-  const banner = document.getElementById('connectionBanner');
-  if (mode === 'live') {
-    banner.style.cssText='display:flex;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;font-weight:600;align-items:center;gap:8px;background:#f0fdf4;border:1.5px solid #86efac;color:#065f46;';
-    banner.innerHTML='🟢 Connected to SharePoint — data syncing live';
-  } else if (mode === 'signing-in') {
-    banner.style.cssText='display:flex;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;font-weight:600;align-items:center;gap:8px;background:#eff6ff;border:1.5px solid #93c5fd;color:#1e40af;cursor:pointer;';
-    banner.innerHTML='🔵 Tap here to sign in and sync with SharePoint';
-    banner.onclick = () => initGraph();
-  } else {
-    banner.style.cssText='display:flex;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;font-weight:600;align-items:center;gap:8px;background:#fdf6b2;border:1.5px solid #fcd34d;color:#92400e;cursor:pointer;';
-    banner.innerHTML='⚠️ Offline mode — tap here to sign in to SharePoint';
-    banner.onclick = () => initGraph();
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DATA MODEL
-// All quantities in CUT PANELS (12×18). 1 full sheet (18×24) = 2 cut panels.
-// ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT = [
+const DEFAULT_INV = [
   { id:'VT47_031_1/1', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'1oz/1oz',  barcode:'VT47_031_1/1', panels:20, criticalPanels:10, reorderPanels:25 },
   { id:'VT47_031_H/H', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'½oz/½oz', barcode:'VT47_031_H/H', panels:16, criticalPanels:10, reorderPanels:25 },
   { id:'VT47_018_1/1', name:'Ventec VT-47 0.018"', mfg:'Ventec', thickness:'0.018"', copper:'1oz/1oz',  barcode:'VT47_018_1/1', panels:16, criticalPanels:10, reorderPanels:25 },
@@ -563,263 +316,243 @@ const DEFAULT = [
   { id:'VT47_021_H/H', name:'Ventec VT-47 0.021"', mfg:'Ventec', thickness:'0.021"', copper:'½oz/½oz', barcode:'VT47_021_H/H', panels:6,  criticalPanels:10, reorderPanels:25 },
 ];
 
-const KEY = 'pcb_lam_v4';
-let inv=[], txLog=[], selItem=null, currentMode='remove';
-let scanner=null, scanning=false;
+const KEY = 'pcb_lam_v5';
+let inv = [], txLog = [], selItem = null, currentMode = 'remove';
+let scanner = null, scanning = false;
 
-function load() {
+function loadLocal() {
   try {
-    const s=localStorage.getItem(KEY);
-    if (s) { const d=JSON.parse(s); inv=d.inv; txLog=d.txLog||[]; }
-    else { inv=JSON.parse(JSON.stringify(DEFAULT)); txLog=[]; }
-  } catch { inv=JSON.parse(JSON.stringify(DEFAULT)); txLog=[]; }
+    const s = localStorage.getItem(KEY);
+    if (s) { const d = JSON.parse(s); inv = d.inv || []; txLog = d.txLog || []; }
+    else { inv = JSON.parse(JSON.stringify(DEFAULT_INV)); txLog = []; }
+  } catch { inv = JSON.parse(JSON.stringify(DEFAULT_INV)); txLog = []; }
 }
-function save() { localStorage.setItem(KEY, JSON.stringify({inv,txLog})); }
+function saveLocal() { localStorage.setItem(KEY, JSON.stringify({ inv, txLog })); }
 
-// panels → sheets display string
-function panelsToSheets(p) {
-  const sheets = p / 2;
-  return Number.isInteger(sheets) ? sheets.toString() : sheets.toFixed(1);
+async function apiCall(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  return res.json();
 }
 
-// ── NAV ───────────────────────────────────────────────────────────────────────
+async function syncFromSheet() {
+  setStatus('syncing', '⏳ Connecting to Google Sheets…');
+  try {
+    const data = await apiCall({ action: 'getInventory' });
+    if (!data.ok) throw new Error('Bad response');
+    const rows = data.data;
+    if (rows.length <= 1) {
+      // Sheet is empty — push our inventory up to it
+      await pushToSheet();
+      return;
+    }
+    const parsed = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0]) continue;
+      parsed.push({
+        id: String(r[0]), name: String(r[1]), mfg: String(r[2]),
+        thickness: String(r[3]), copper: String(r[4]), barcode: String(r[5]),
+        panels: parseInt(r[6]) || 0, criticalPanels: parseInt(r[7]) || 10, reorderPanels: parseInt(r[8]) || 25,
+      });
+    }
+    if (parsed.length > 0) { inv = parsed; saveLocal(); }
+    setStatus('synced', '🟢 Connected to Google Sheets — live data');
+    updateHeaderSub();
+    renderStock();
+  } catch(e) {
+    setStatus('error', '⚠️ Offline — using local data. Tap Admin > Force Sync to retry.');
+  }
+}
+
+async function pushToSheet() {
+  try {
+    await apiCall({ action: 'setupSheet', items: JSON.stringify(inv) });
+    setStatus('synced', '🟢 Connected to Google Sheets — live data');
+    updateHeaderSub();
+  } catch(e) {
+    setStatus('error', '⚠️ Could not write to Google Sheets');
+  }
+}
+
+async function updateSheetItem(item, newPanels) {
+  try { await apiCall({ action: 'updateItem', id: item.id, panels: newPanels }); } catch(e) {}
+}
+
+async function logToSheet(item, action, qty, remaining) {
+  try { await apiCall({ action: 'logTransaction', id: item.id, name: item.name, action2: action, qty, remaining }); } catch(e) {}
+}
+
+function setStatus(type, msg) {
+  const bar = document.getElementById('statusBar');
+  bar.className = 'status-bar ' + type;
+  bar.textContent = msg;
+}
+
 function showPage(id, btn) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
   btn.classList.add('active');
-  if (id!=='scan' && scanning) stopScan();
-  if (id==='stock') renderStock();
-  if (id==='admin') renderAdmin();
+  if (id !== 'scan' && scanning) stopScan();
+  if (id === 'stock') renderStock();
+  if (id === 'admin') renderAdmin();
 }
 
-// ── SCANNER ───────────────────────────────────────────────────────────────────
 function toggleScan() { scanning ? stopScan() : startScan(); }
 function startScan() {
-  document.getElementById('scanIdle').style.display='none';
-  document.getElementById('scanBtn').textContent='⏹ Stop Scanner';
+  document.getElementById('scanIdle').style.display = 'none';
+  document.getElementById('scanBtn').textContent = '⏹ Stop Scanner';
   document.getElementById('scanBtn').classList.add('stop');
-  scanner=new Html5Qrcode('reader');
-  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:160}},
-    code=>{
-      const item=inv.find(i=>i.barcode===code||i.id===code);
-      if (item) { stopScan(); selectItem(item); toast('Found: '+item.name); }
-      else toast('Code not recognized: '+code,'err');
-    }, ()=>{}
-  ).then(()=>scanning=true).catch(()=>{ toast('Camera error — check permissions','err'); stopScan(); });
+  scanner = new Html5Qrcode('reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 } },
+    code => {
+      const item = inv.find(i => i.barcode === code || i.id === code);
+      if (item) { stopScan(); selectItem(item); toast('Found: ' + item.name); }
+      else toast('Code not recognized: ' + code, 'err');
+    }, () => {}
+  ).then(() => scanning = true).catch(() => { toast('Camera error — check permissions', 'err'); stopScan(); });
 }
 function stopScan() {
-  if (scanner&&scanning) scanner.stop().catch(()=>{});
-  scanning=false;
-  document.getElementById('scanIdle').style.display='flex';
-  document.getElementById('scanBtn').textContent='📷 Start Scanner';
+  if (scanner && scanning) scanner.stop().catch(() => {});
+  scanning = false;
+  document.getElementById('scanIdle').style.display = 'flex';
+  document.getElementById('scanBtn').textContent = '📷 Start Scanner';
   document.getElementById('scanBtn').classList.remove('stop');
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────────
 function doSearch(v) {
-  const dd=document.getElementById('searchDD');
+  const dd = document.getElementById('searchDD');
   if (!v.trim()) { dd.classList.remove('open'); return; }
-  const hits=inv.filter(i=>
-    i.name.toLowerCase().includes(v.toLowerCase())||
-    i.mfg.toLowerCase().includes(v.toLowerCase())||
-    i.id.toLowerCase().includes(v.toLowerCase())||
-    i.copper.toLowerCase().includes(v.toLowerCase())||
+  const hits = inv.filter(i =>
+    i.name.toLowerCase().includes(v.toLowerCase()) ||
+    i.mfg.toLowerCase().includes(v.toLowerCase()) ||
+    i.id.toLowerCase().includes(v.toLowerCase()) ||
+    i.copper.toLowerCase().includes(v.toLowerCase()) ||
     i.barcode.toLowerCase().includes(v.toLowerCase())
   );
   if (!hits.length) { dd.classList.remove('open'); return; }
   dd.classList.add('open');
-  dd.innerHTML=hits.map(h=>{
-    const s=getStatus(h);
-    const col=s==='critical'?'var(--red)':s==='warning'?'var(--yellow)':'var(--green)';
-    return `<div class="dd-item" onclick="pickSearch('${h.id}')">
+  dd.innerHTML = hits.map(h => {
+    const s = getStatus(h);
+    const col = s === 'critical' ? 'var(--red)' : s === 'warning' ? 'var(--yellow)' : 'var(--green)';
+    return `<div class="dd-item" onclick="pickSearch('${h.id.replace(/'/g,"\\'")}')">
       <div><div class="dd-name">${h.name}</div><div class="dd-meta">${h.copper} · ${h.thickness} · ${h.id}</div></div>
       <div class="dd-qty" style="color:${col}">${h.panels} panels</div>
     </div>`;
   }).join('');
 }
 function pickSearch(id) {
-  document.getElementById('searchBox').value='';
+  document.getElementById('searchBox').value = '';
   document.getElementById('searchDD').classList.remove('open');
-  selectItem(inv.find(i=>i.id===id));
+  selectItem(inv.find(i => i.id === id));
 }
 
-// ── SELECT ITEM ───────────────────────────────────────────────────────────────
 function selectItem(item) {
-  selItem=item;
+  selItem = item;
   document.getElementById('itemCard').classList.add('visible');
-  document.getElementById('ic-name').textContent=item.name;
-  document.getElementById('ic-sub').textContent=`${item.id}  ·  ${item.mfg}  ·  ${item.copper}  ·  ${item.thickness}`;
-  document.getElementById('removeQty').value=1;
-  setMode('remove');
-  clearPresets();
-
-  // Show local data immediately — never block the UI
-  setModeIndicator('local');
-  refreshDisplay(selItem);
-  document.getElementById('itemCard').scrollIntoView({behavior:'smooth',block:'start'});
-
-  // Try to sync from SharePoint in background (non-blocking)
-  if (graphReady) {
-    graphGetStock().then(liveInv => {
-      if (liveInv) {
-        const live = liveInv.find(r => r.barcode === item.barcode || r.id === item.id);
-        if (live) {
-          const idx = inv.findIndex(i=>i.id===item.id);
-          if (idx>=0) {
-            inv[idx].panels         = live.panels;
-            inv[idx].criticalPanels = live.criticalPanels;
-            inv[idx].reorderPanels  = live.reorderPanels;
-            selItem = inv[idx];
-            save();
-            setModeIndicator('live');
-            refreshDisplay(selItem);
-          }
-        }
-      }
-    }).catch(()=>{});
-  }
-}
-
-function setLoadingDisplay(loading) {
-  document.getElementById('panelCountBig').textContent = loading ? '…' : (selItem ? selItem.panels : '—');
-}
-
-function setModeIndicator(mode) {
-  const el = document.getElementById('modeIndicator');
-  if (!el) return;
-  const cfg = {
-    live:    { text:'● Live (SharePoint)', color:'var(--green)' },
-    offline: { text:'⚠ Offline (local only)', color:'var(--yellow)' },
-    local:   { text:'○ Local mode', color:'var(--muted2)' },
-  };
-  const c = cfg[mode] || cfg.local;
-  el.textContent = c.text;
-  el.style.color = c.color;
+  document.getElementById('ic-name').textContent = item.name;
+  document.getElementById('ic-sub').textContent = `${item.id}  ·  ${item.mfg}  ·  ${item.copper}  ·  ${item.thickness}`;
+  document.getElementById('removeQty').value = 1;
+  setMode('remove'); clearPresets(); refreshDisplay(item);
+  document.getElementById('itemCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function refreshDisplay(item) {
-  const s=getStatus(item);
-  document.getElementById('stockMain').className='stock-main '+s;
-  document.getElementById('panelCountBig').textContent=item.panels;
-  document.getElementById('sheetEquiv').textContent=panelsToSheets(item.panels)+' equivalent full sheets (18×24)';
-  document.getElementById('sm-critical').textContent=item.criticalPanels;
-  document.getElementById('sm-reorder').textContent=item.reorderPanels;
+  const s = getStatus(item);
+  document.getElementById('stockMain').className = 'stock-main ' + s;
+  document.getElementById('panelCountBig').textContent = item.panels;
+  document.getElementById('sheetEquiv').textContent = panelsToSheets(item.panels) + ' equivalent full sheets (18×24)';
+  document.getElementById('sm-critical').textContent = item.criticalPanels;
+  document.getElementById('sm-reorder').textContent = item.reorderPanels;
 }
 
-// ── MODE (remove / add) ───────────────────────────────────────────────────────
 function setMode(mode) {
-  currentMode=mode;
-  const btnR=document.getElementById('modeRemove');
-  const btnA=document.getElementById('modeAdd');
-  const confirmBtn=document.getElementById('confirmBtn');
-  if (mode==='remove') {
-    btnR.className='mode-btn active-remove';
-    btnA.className='mode-btn';
-    confirmBtn.textContent='✓ Confirm Removal';
-    confirmBtn.className='confirm-btn';
+  currentMode = mode;
+  const btnR = document.getElementById('modeRemove'), btnA = document.getElementById('modeAdd');
+  const cb = document.getElementById('confirmBtn');
+  if (mode === 'remove') {
+    btnR.className = 'mode-btn active-remove'; btnA.className = 'mode-btn';
+    cb.textContent = '✓ Confirm Removal'; cb.className = 'confirm-btn';
   } else {
-    btnR.className='mode-btn';
-    btnA.className='mode-btn active-add';
-    confirmBtn.textContent='✓ Add to Stock';
-    confirmBtn.className='confirm-btn add-mode';
+    btnR.className = 'mode-btn'; btnA.className = 'mode-btn active-add';
+    cb.textContent = '✓ Add to Stock'; cb.className = 'confirm-btn add-mode';
   }
 }
 
-// ── PRESETS ───────────────────────────────────────────────────────────────────
 function setPreset(val) {
-  document.getElementById('removeQty').value=val;
-  clearPresets();
-  document.querySelectorAll('.preset-btn').forEach(b=>{ if (parseInt(b.textContent)===val) b.classList.add('sel'); });
+  document.getElementById('removeQty').value = val; clearPresets();
+  document.querySelectorAll('.preset-btn').forEach(b => { if (parseInt(b.textContent) === val) b.classList.add('sel'); });
 }
-function clearPresets() { document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('sel')); }
+function clearPresets() { document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('sel')); }
 function adj(d) {
-  const inp=document.getElementById('removeQty');
-  inp.value=Math.max(1,(parseInt(inp.value)||1)+d);
-  clearPresets();
+  const inp = document.getElementById('removeQty');
+  inp.value = Math.max(1, (parseInt(inp.value) || 1) + d); clearPresets();
 }
 
-// ── CONFIRM ACTION ────────────────────────────────────────────────────────────
 async function confirmAction() {
   if (!selItem) return;
-  const qty=parseInt(document.getElementById('removeQty').value);
-  if (!qty||qty<1) { toast('Enter a valid quantity','err'); return; }
+  const qty = parseInt(document.getElementById('removeQty').value);
+  if (!qty || qty < 1) { toast('Enter a valid quantity', 'err'); return; }
+  const idx = inv.findIndex(i => i.id === selItem.id);
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
 
-  const idx=inv.findIndex(i=>i.id===selItem.id);
-
-  if (currentMode==='remove') {
-    if (qty>inv[idx].panels) { toast('Not enough panels in stock!','err'); return; }
-    const newTotal = inv[idx].panels - qty;
-
-    // Disable button during async call
-    const btn = document.getElementById('confirmBtn');
-    btn.disabled = true; btn.textContent = 'Saving…';
-
-    // Send to SharePoint via Graph API
-    const success = await graphUpdate(selItem, 'Remove', qty, newTotal);
-
-    inv[idx].panels = newTotal;
-    txLog.unshift({id:selItem.id,name:selItem.name,copper:selItem.copper,mode:'remove',qty,remaining:newTotal,synced:success,time:new Date().toISOString()});
-    selItem=inv[idx];
-    save(); refreshDisplay(selItem);
-    document.getElementById('removeQty').value=1; clearPresets();
-    btn.disabled=false; setMode('remove');
-
-    if (!success && graphReady) toast('Saved locally — SharePoint sync failed','wrn');
-    else if (selItem.panels<=selItem.criticalPanels) toast(`⚠ LOW STOCK: ${selItem.name} — order now!`,'wrn');
-    else toast(`✓ Removed ${qty} panel${qty>1?'s':''} · ${selItem.panels} remaining`);
-
+  let newTotal;
+  if (currentMode === 'remove') {
+    if (qty > inv[idx].panels) { toast('Not enough panels in stock!', 'err'); btn.disabled = false; setMode('remove'); return; }
+    newTotal = inv[idx].panels - qty;
   } else {
-    const newTotal = inv[idx].panels + qty;
-
-    const btn = document.getElementById('confirmBtn');
-    btn.disabled=true; btn.textContent='Saving…';
-
-    const success = await graphUpdate(selItem, 'Add', qty, newTotal);
-
-    inv[idx].panels = newTotal;
-    txLog.unshift({id:selItem.id,name:selItem.name,copper:selItem.copper,mode:'add',qty,remaining:newTotal,synced:success,time:new Date().toISOString()});
-    selItem=inv[idx];
-    save(); refreshDisplay(selItem);
-    document.getElementById('removeQty').value=1; clearPresets();
-    btn.disabled=false; setMode('add');
-
-    if (!success && graphReady) toast('Saved locally — SharePoint sync failed','wrn');
-    else toast(`✓ Added ${qty} panel${qty>1?'s':''} · ${selItem.panels} now in stock`,'ok');
+    newTotal = inv[idx].panels + qty;
   }
-  if (txLog.length>200) txLog.pop();
+
+  inv[idx].panels = newTotal;
+  const action = currentMode === 'remove' ? 'Remove' : 'Add';
+  txLog.unshift({ id: selItem.id, name: selItem.name, copper: selItem.copper, mode: currentMode, qty, remaining: newTotal, time: new Date().toISOString() });
+  if (txLog.length > 200) txLog.pop();
+  selItem = inv[idx];
+  saveLocal(); refreshDisplay(selItem);
+
+  // Sync to Google Sheets (background — non-blocking)
+  updateSheetItem(selItem, newTotal);
+  logToSheet(selItem, action, qty, newTotal);
+
+  btn.disabled = false; setMode(currentMode); document.getElementById('removeQty').value = 1; clearPresets();
+
+  if (currentMode === 'remove' && newTotal <= selItem.criticalPanels) toast(`⚠ LOW STOCK: ${selItem.name} — order now!`, 'wrn');
+  else if (currentMode === 'remove') toast(`✓ Removed ${qty} panel${qty > 1 ? 's' : ''} · ${newTotal} remaining`);
+  else toast(`✓ Added ${qty} panel${qty > 1 ? 's' : ''} · ${newTotal} in stock`, 'ok');
 }
 
-// ── STATUS ────────────────────────────────────────────────────────────────────
 function getStatus(item) {
-  if (item.panels<=item.criticalPanels) return 'critical';
-  if (item.panels<=item.criticalPanels*1.6) return 'warning';
+  if (item.panels <= item.criticalPanels) return 'critical';
+  if (item.panels <= item.criticalPanels * 1.6) return 'warning';
   return 'ok';
 }
+function panelsToSheets(p) { const s = p / 2; return Number.isInteger(s) ? s.toString() : s.toFixed(1); }
+function updateHeaderSub() {
+  const cc = inv.filter(i => getStatus(i) === 'critical').length;
+  document.getElementById('headerSub').textContent = cc ? `⚠ ${cc} item${cc > 1 ? 's' : ''} need ordering` : `${inv.length} SKUs tracked`;
+}
 
-// ── STOCK PAGE ────────────────────────────────────────────────────────────────
 function renderStock() {
-  const sorted=[...inv].sort((a,b)=>{const o={critical:0,warning:1,ok:2};return o[getStatus(a)]-o[getStatus(b)];});
-  const crits=inv.filter(i=>getStatus(i)==='critical');
-  const bar=document.getElementById('alertBar');
+  const sorted = [...inv].sort((a, b) => ({ critical:0, warning:1, ok:2 }[getStatus(a)] - { critical:0, warning:1, ok:2 }[getStatus(b)]));
+  const crits = inv.filter(i => getStatus(i) === 'critical');
+  const bar = document.getElementById('alertBar');
   if (crits.length) {
     bar.classList.add('visible');
-    document.getElementById('alertBody').innerHTML=crits.map(c=>
-      `• <strong>${c.name}</strong> (${c.copper}) — ${c.panels} panels left · Reorder: ${c.reorderPanels} panels`
-    ).join('<br>');
+    document.getElementById('alertBody').innerHTML = crits.map(c => `• <strong>${c.name}</strong> (${c.copper}) — ${c.panels} panels left · Reorder: ${c.reorderPanels} panels`).join('<br>');
   } else bar.classList.remove('visible');
 
-  document.getElementById('stockCount').textContent=inv.length+' SKUs';
-  document.getElementById('stockList').innerHTML=sorted.map(item=>{
-    const s=getStatus(item);
-    const bc=s==='critical'?'badge-crit':s==='warning'?'badge-warn':'badge-ok';
-    const bt=s==='critical'?'ORDER NOW':s==='warning'?'Low':'OK';
+  document.getElementById('stockCount').textContent = inv.length + ' SKUs';
+  document.getElementById('stockList').innerHTML = sorted.map(item => {
+    const s = getStatus(item);
     return `<div class="stock-item ${s}">
       <div class="si-row">
         <div>
           <div class="si-name">${item.name}</div>
           <div class="si-meta">${item.id} · ${item.copper} · ${item.mfg}</div>
-          <span class="si-badge ${bc}">${bt}</span>
+          <span class="si-badge ${ s==='critical'?'badge-crit':s==='warning'?'badge-warn':'badge-ok' }">${ s==='critical'?'ORDER NOW':s==='warning'?'Low':'OK' }</span>
         </div>
         <div class="si-right">
           <div class="si-panels ${s}">${item.panels}</div>
@@ -830,9 +563,9 @@ function renderStock() {
     </div>`;
   }).join('');
 
-  const lc=document.getElementById('logCard');
-  if (!txLog.length) { lc.innerHTML='<div class="empty">No transactions yet</div>'; return; }
-  lc.innerHTML=txLog.slice(0,40).map(t=>`
+  const lc = document.getElementById('logCard');
+  if (!txLog.length) { lc.innerHTML = '<div class="empty">No transactions yet</div>'; return; }
+  lc.innerHTML = txLog.slice(0, 40).map(t => `
     <div class="log-row">
       <div>
         <div class="log-name">${t.name} <span style="font-size:11px;color:var(--muted)">(${t.copper})</span></div>
@@ -843,13 +576,12 @@ function renderStock() {
 }
 
 function fmtTime(iso) {
-  const d=new Date(iso);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
 
-// ── ADMIN ─────────────────────────────────────────────────────────────────────
 function renderAdmin() {
-  document.getElementById('adminList').innerHTML=inv.map((item,i)=>`
+  document.getElementById('adminList').innerHTML = inv.map((item, i) => `
     <div class="admin-item" id="ai-${i}">
       <div class="adm-hdr" onclick="togAdmin(${i})">
         <div><div class="adm-hdr-name">${item.name}</div><div class="adm-hdr-meta">${item.id} · ${item.copper} · ${item.panels} panels</div></div>
@@ -862,89 +594,82 @@ function renderAdmin() {
           <div class="adm-f"><label>Thickness</label><input type="text" id="a-thick-${i}" value="${item.thickness}"></div>
           <div class="adm-f full"><label>Copper Weight</label>
             <select id="a-copper-${i}">
-              <option value="1oz/1oz"  ${item.copper==='1oz/1oz'?'selected':''}>1oz / 1oz</option>
-              <option value="½oz/½oz"  ${item.copper==='½oz/½oz'?'selected':''}>½oz / ½oz</option>
-              <option value="1oz/½oz"  ${item.copper==='1oz/½oz'?'selected':''}>1oz / ½oz</option>
-              <option value="2oz/2oz"  ${item.copper==='2oz/2oz'?'selected':''}>2oz / 2oz</option>
+              <option value="1oz/1oz" ${item.copper==='1oz/1oz'?'selected':''}>1oz / 1oz</option>
+              <option value="½oz/½oz" ${item.copper==='½oz/½oz'?'selected':''}>½oz / ½oz</option>
+              <option value="1oz/½oz" ${item.copper==='1oz/½oz'?'selected':''}>1oz / ½oz</option>
+              <option value="2oz/2oz" ${item.copper==='2oz/2oz'?'selected':''}>2oz / 2oz</option>
             </select>
           </div>
           <div class="adm-f"><label>Barcode / QR Value</label><input type="text" id="a-bc-${i}" value="${item.barcode}"></div>
-          <div class="adm-f"><label>Current Stock (panels)</label><input type="number" id="a-panels-${i}" value="${item.panels}" min="0" step="1"></div>
-          <div class="adm-f"><label>Critical Level (panels)</label><input type="number" id="a-crit-${i}" value="${item.criticalPanels}" min="1" step="1"></div>
-          <div class="adm-f"><label>Reorder Qty (panels)</label><input type="number" id="a-reorder-${i}" value="${item.reorderPanels}" min="1" step="1"></div>
+          <div class="adm-f"><label>Current Stock (panels)</label><input type="number" id="a-panels-${i}" value="${item.panels}" min="0"></div>
+          <div class="adm-f"><label>Critical Level (panels)</label><input type="number" id="a-crit-${i}" value="${item.criticalPanels}" min="1"></div>
+          <div class="adm-f"><label>Reorder Qty (panels)</label><input type="number" id="a-reorder-${i}" value="${item.reorderPanels}" min="1"></div>
         </div>
-        <div class="adm-note">📐 All quantities are in 12×18 cut panels. 2 panels = 1 full 18×24 sheet.<br>When receiving a new order, use the <strong>+ Add to Stock</strong> button on the Update tab instead of editing here.</div>
-        <button class="save-btn" onclick="saveItem(${i})">💾 Save Changes</button>
-        <button class="del-btn"  onclick="delItem(${i})">🗑 Delete Item</button>
+        <button class="save-btn" onclick="saveItem(${i})">💾 Save & Sync to Sheet</button>
+        <button class="del-btn" onclick="delItem(${i})">🗑 Delete Item</button>
       </div>
     </div>`).join('');
 }
 
-function togAdmin(i) { document.getElementById('ai-'+i).classList.toggle('open'); }
+function togAdmin(i) { document.getElementById('ai-' + i).classList.toggle('open'); }
 
-function saveItem(i) {
-  inv[i].name=document.getElementById('a-name-'+i).value.trim();
-  inv[i].mfg=document.getElementById('a-mfg-'+i).value.trim();
-  inv[i].thickness=document.getElementById('a-thick-'+i).value.trim();
-  inv[i].copper=document.getElementById('a-copper-'+i).value;
-  inv[i].barcode=document.getElementById('a-bc-'+i).value.trim();
-  inv[i].panels=Math.max(0,parseInt(document.getElementById('a-panels-'+i).value)||0);
-  inv[i].criticalPanels=Math.max(1,parseInt(document.getElementById('a-crit-'+i).value)||5);
-  inv[i].reorderPanels=Math.max(1,parseInt(document.getElementById('a-reorder-'+i).value)||20);
-  save(); toast('✓ Saved');
-  document.getElementById('ai-'+i).classList.remove('open');
+async function saveItem(i) {
+  inv[i].name = document.getElementById('a-name-'+i).value.trim();
+  inv[i].mfg = document.getElementById('a-mfg-'+i).value.trim();
+  inv[i].thickness = document.getElementById('a-thick-'+i).value.trim();
+  inv[i].copper = document.getElementById('a-copper-'+i).value;
+  inv[i].barcode = document.getElementById('a-bc-'+i).value.trim();
+  inv[i].panels = Math.max(0, parseInt(document.getElementById('a-panels-'+i).value)||0);
+  inv[i].criticalPanels = Math.max(1, parseInt(document.getElementById('a-crit-'+i).value)||5);
+  inv[i].reorderPanels = Math.max(1, parseInt(document.getElementById('a-reorder-'+i).value)||20);
+  saveLocal(); await pushToSheet();
+  toast('✓ Saved & synced', 'ok');
+  document.getElementById('ai-'+i).classList.remove('open'); renderAdmin();
+}
+
+async function delItem(i) {
+  if (!confirm('Delete "' + inv[i].name + '"?')) return;
+  inv.splice(i, 1); saveLocal(); await pushToSheet(); renderAdmin(); toast('Item deleted');
+}
+
+async function addItem() {
+  const id = 'LAM-' + String(inv.length+1).padStart(3,'0');
+  inv.push({ id, name:'New Laminate', mfg:'', thickness:'0.062"', copper:'1oz/1oz', barcode:id.replace('-',''), panels:0, criticalPanels:10, reorderPanels:40 });
+  saveLocal(); renderAdmin();
+  const idx = inv.length - 1;
+  document.getElementById('ai-'+idx).classList.add('open');
+  document.getElementById('ai-'+idx).scrollIntoView({ behavior:'smooth' });
+}
+
+async function forceSync() {
+  toast('Syncing with Google Sheets…');
+  await syncFromSheet();
   renderAdmin();
 }
 
-function delItem(i) {
-  if (!confirm('Delete "'+inv[i].name+'"?')) return;
-  inv.splice(i,1); save(); renderAdmin(); toast('Item deleted');
-}
-
-function addItem() {
-  const id='LAM-'+String(inv.length+1).padStart(3,'0');
-  inv.push({id,name:'New Laminate',mfg:'',thickness:'0.062"',copper:'1oz/1oz',barcode:id.replace('-',''),panels:0,criticalPanels:10,reorderPanels:40});
-  save(); renderAdmin();
-  const i=inv.length-1;
-  document.getElementById('ai-'+i).classList.add('open');
-  document.getElementById('ai-'+i).scrollIntoView({behavior:'smooth'});
-}
-
-// ── EXPORT ────────────────────────────────────────────────────────────────────
 function exportCSV() {
-  let csv='Item ID,Name,Manufacturer,Thickness,Copper Weight,Barcode,Cut Panels (12x18),Full Sheet Equiv (18x24),Critical Level (panels),Reorder Qty (panels),Status\n';
-  inv.forEach(i=>{
-    csv+=`${i.id},"${i.name}","${i.mfg}",${i.thickness},${i.copper},${i.barcode},${i.panels},${panelsToSheets(i.panels)},${i.criticalPanels},${i.reorderPanels},${getStatus(i).toUpperCase()}\n`;
-  });
-  csv+='\n\nTransaction Log\nItem,Copper,Action,Qty (panels),Remaining (panels),Time\n';
-  txLog.forEach(t=>{
-    csv+=`"${t.name}","${t.copper||''}",${t.mode==='remove'?'Remove':'Add'},${t.qty},${t.remaining},"${new Date(t.time).toLocaleString()}"\n`;
-  });
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download='pcb_laminate_'+new Date().toISOString().split('T')[0]+'.csv';
+  let csv = 'Item ID,Name,Manufacturer,Thickness,Copper,Barcode,Cut Panels,Full Sheets,Critical Level,Reorder Qty,Status\n';
+  inv.forEach(i => { csv += `${i.id},"${i.name}","${i.mfg}",${i.thickness},${i.copper},${i.barcode},${i.panels},${panelsToSheets(i.panels)},${i.criticalPanels},${i.reorderPanels},${getStatus(i).toUpperCase()}\n`; });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv' }));
+  a.download = 'pcb_laminate_' + new Date().toISOString().split('T')[0] + '.csv';
   a.click(); toast('✓ CSV exported');
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────────────────
 let tTimer;
-function toast(msg,cls='') {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className='toast'+(cls?' '+cls:'');
+function toast(msg, cls='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast' + (cls?' '+cls:'');
   void el.offsetWidth; el.classList.add('show');
-  clearTimeout(tTimer); tTimer=setTimeout(()=>el.classList.remove('show'),3500);
+  clearTimeout(tTimer); tTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-load();
-const now=new Date();
-document.getElementById('headerDate').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-const cc=inv.filter(i=>getStatus(i)==='critical').length;
-document.getElementById('headerSub').textContent=cc?`⚠ ${cc} item${cc>1?'s':''} need ordering`:`${inv.length} SKUs tracked`;
-
-// Show banner immediately (non-blocking), then attempt silent auth
-updateBanner('signing-in');
-setTimeout(() => initGraph(), 100);
+// INIT
+loadLocal();
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+updateHeaderSub();
+renderStock();
+syncFromSheet();
 </script>
 </body>
 </html>
