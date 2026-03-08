@@ -503,20 +503,25 @@ async function graphUpdate(item, action, qty, newTotal) {
 let graphReady = false;
 
 async function initGraph() {
-  await msalApp.initialize();
+  try {
+    await msalApp.initialize();
+    await msalApp.handleRedirectPromise();
+  } catch(e) { console.warn('MSAL init error', e); }
+
   const token = await getToken();
   if (token) {
     graphReady = true;
-    // Sync full inventory from SharePoint on load
-    const liveInv = await graphGetStock();
-    if (liveInv && liveInv.length) {
-      inv = liveInv;
-      save();
-      const cc = inv.filter(i=>getStatus(i)==='critical').length;
-      document.getElementById('headerSub').textContent = cc ? `⚠ ${cc} item${cc>1?'s':''} need ordering` : `${inv.length} SKUs tracked`;
-      renderStock();
-    }
     updateBanner('live');
+    try {
+      const liveInv = await graphGetStock();
+      if (liveInv && liveInv.length) {
+        inv = liveInv;
+        save();
+        const cc = inv.filter(i=>getStatus(i)==='critical').length;
+        document.getElementById('headerSub').textContent = cc ? `⚠ ${cc} item${cc>1?'s':''} need ordering` : `${inv.length} SKUs tracked`;
+        renderStock();
+      }
+    } catch(e) { console.warn('SharePoint sync error', e); }
   } else {
     updateBanner('offline');
   }
@@ -930,9 +935,9 @@ document.getElementById('headerDate').textContent=now.toLocaleDateString('en-US'
 const cc=inv.filter(i=>getStatus(i)==='critical').length;
 document.getElementById('headerSub').textContent=cc?`⚠ ${cc} item${cc>1?'s':''} need ordering`:`${inv.length} SKUs tracked`;
 
-// Show sign-in banner and attempt silent auth
+// Show banner immediately (non-blocking), then attempt silent auth
 updateBanner('signing-in');
-initGraph();
+setTimeout(() => initGraph(), 100);
 </script>
 </body>
 </html>
