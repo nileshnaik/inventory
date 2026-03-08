@@ -502,13 +502,20 @@ async function graphUpdate(item, action, qty, newTotal) {
 
 let graphReady = false;
 
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((_,r) => setTimeout(() => r(new Error('timeout')), ms))]);
+}
+
 async function initGraph() {
   try {
-    await msalApp.initialize();
-    await msalApp.handleRedirectPromise();
-  } catch(e) { console.warn('MSAL init error', e); }
+    await withTimeout(msalApp.initialize(), 5000);
+  } catch(e) { console.warn('MSAL init timed out:', e); updateBanner('offline'); return; }
 
-  const token = await getToken();
+  try { await msalApp.handleRedirectPromise(); } catch(e) {}
+
+  let token = null;
+  try { token = await withTimeout(getToken(), 10000); } catch(e) { console.warn('getToken timed out'); }
+
   if (token) {
     graphReady = true;
     updateBanner('live');
