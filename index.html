@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PCB Laminate Inventory</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -220,6 +220,8 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
           <div class="si-icon">⬛</div>
           <p>Camera inactive</p>
         </div>
+        <video id="scanVideo" style="display:none;width:100%;border-radius:8px;" playsinline muted></video>
+        <canvas id="scanCanvas" style="display:none;"></canvas>
       </div>
       <button class="primary-btn" id="scanBtn" onclick="toggleScan()">📷 Start Scanner</button>
     </div>
@@ -400,35 +402,57 @@ function showPage(id, btn) {
 }
 
 function toggleScan() { scanning ? stopScan() : startScan(); }
+
+let scanStream = null;
+let scanAnimFrame = null;
+
 function startScan() {
   document.getElementById('scanIdle').style.display = 'none';
   document.getElementById('scanBtn').textContent = '⏹ Stop Scanner';
   document.getElementById('scanBtn').classList.add('stop');
-  scanner = new Html5Qrcode('reader');
-  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 } },
-    code => {
-      if (!scanning) return; // prevent double-fire
-      const item = inv.find(i => i.barcode === code || i.id === code);
-      if (item) {
-        stopScan();
-        // Small delay so camera releases cleanly before UI updates (fixes iOS black screen)
-        setTimeout(() => { selectItem(item); toast('Found: ' + item.name); }, 300);
-      } else {
-        toast('Code not recognized: ' + code, 'err');
+
+  const video = document.getElementById('scanVideo');
+  const canvas = document.getElementById('scanCanvas');
+  const ctx = canvas.getContext('2d');
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      scanStream = stream;
+      video.srcObject = stream;
+      video.style.display = 'block';
+      video.play();
+      scanning = true;
+      requestAnimationFrame(scanFrame);
+    })
+    .catch(() => { toast('Camera error — check permissions', 'err'); stopScan(); });
+
+  function scanFrame() {
+    if (!scanning) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+      if (code && code.data) {
+        const item = inv.find(i => i.barcode === code.data || i.id === code.data);
+        if (item) {
+          stopScan();
+          setTimeout(() => { selectItem(item); toast('Found: ' + item.name); }, 100);
+          return;
+        }
       }
-    }, () => {}
-  ).then(() => scanning = true).catch(() => { toast('Camera error — check permissions', 'err'); stopScan(); });
-}
-function stopScan() {
-  if (scanner && scanning) {
-    scanning = false; // set false first to prevent re-entry
-    scanner.stop().then(() => {
-      scanner.clear();
-      document.getElementById('reader').innerHTML = '';
-    }).catch(() => {});
-  } else {
-    scanning = false;
+    }
+    scanAnimFrame = requestAnimationFrame(scanFrame);
   }
+}
+
+function stopScan() {
+  scanning = false;
+  if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  const video = document.getElementById('scanVideo');
+  if (video) { video.srcObject = null; video.style.display = 'none'; }
   document.getElementById('scanIdle').style.display = 'flex';
   document.getElementById('scanBtn').textContent = '📷 Start Scanner';
   document.getElementById('scanBtn').classList.remove('stop');
