@@ -308,12 +308,12 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW5d9w8dv1e1bi7XpmOhgBTriqQPMojoESX9LQ3sM6HchAkJ39r32HJmdtJt1j2v9h/exec';
 
 const DEFAULT_INV = [
-  { id:'VT47_031_1/1', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'1oz/1oz',  barcode:'VT47_031_1/1', panels:20, criticalPanels:10, reorderPanels:25 },
-  { id:'VT47_031_H/H', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'½oz/½oz', barcode:'VT47_031_H/H', panels:16, criticalPanels:10, reorderPanels:25 },
-  { id:'VT47_018_1/1', name:'Ventec VT-47 0.018"', mfg:'Ventec', thickness:'0.018"', copper:'1oz/1oz',  barcode:'VT47_018_1/1', panels:16, criticalPanels:10, reorderPanels:25 },
-  { id:'VT47_018_H/H', name:'Ventec VT-47 0.018"', mfg:'Ventec', thickness:'0.018"', copper:'½oz/½oz', barcode:'VT47_018_H/H', panels:10, criticalPanels:10, reorderPanels:25 },
-  { id:'VT47_021_1/1', name:'Ventec VT-47 0.021"', mfg:'Ventec', thickness:'0.021"', copper:'1oz/1oz',  barcode:'VT47_021_1/1', panels:36, criticalPanels:10, reorderPanels:25 },
-  { id:'VT47_021_H/H', name:'Ventec VT-47 0.021"', mfg:'Ventec', thickness:'0.021"', copper:'½oz/½oz', barcode:'VT47_021_H/H', panels:6,  criticalPanels:10, reorderPanels:25 },
+  { id:'VT47_031_1/1', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'1oz/1oz',  barcode:'VT47031-1-1', panels:20, criticalPanels:10, reorderPanels:25 },
+  { id:'VT47_031_H/H', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'½oz/½oz', barcode:'VT47031-H-H', panels:16, criticalPanels:10, reorderPanels:25 },
+  { id:'VT47_018_1/1', name:'Ventec VT-47 0.018"', mfg:'Ventec', thickness:'0.018"', copper:'1oz/1oz',  barcode:'VT47018-1-1', panels:16, criticalPanels:10, reorderPanels:25 },
+  { id:'VT47_018_H/H', name:'Ventec VT-47 0.018"', mfg:'Ventec', thickness:'0.018"', copper:'½oz/½oz', barcode:'VT47018-H-H', panels:10, criticalPanels:10, reorderPanels:25 },
+  { id:'VT47_021_1/1', name:'Ventec VT-47 0.021"', mfg:'Ventec', thickness:'0.021"', copper:'1oz/1oz',  barcode:'VT47021-1-1', panels:36, criticalPanels:10, reorderPanels:25 },
+  { id:'VT47_021_H/H', name:'Ventec VT-47 0.021"', mfg:'Ventec', thickness:'0.021"', copper:'½oz/½oz', barcode:'VT47021-H-H', panels:6,  criticalPanels:10, reorderPanels:25 },
 ];
 
 const KEY = 'pcb_lam_v5';
@@ -407,15 +407,28 @@ function startScan() {
   scanner = new Html5Qrcode('reader');
   scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 } },
     code => {
+      if (!scanning) return; // prevent double-fire
       const item = inv.find(i => i.barcode === code || i.id === code);
-      if (item) { stopScan(); selectItem(item); toast('Found: ' + item.name); }
-      else toast('Code not recognized: ' + code, 'err');
+      if (item) {
+        stopScan();
+        // Small delay so camera releases cleanly before UI updates (fixes iOS black screen)
+        setTimeout(() => { selectItem(item); toast('Found: ' + item.name); }, 300);
+      } else {
+        toast('Code not recognized: ' + code, 'err');
+      }
     }, () => {}
   ).then(() => scanning = true).catch(() => { toast('Camera error — check permissions', 'err'); stopScan(); });
 }
 function stopScan() {
-  if (scanner && scanning) scanner.stop().catch(() => {});
-  scanning = false;
+  if (scanner && scanning) {
+    scanning = false; // set false first to prevent re-entry
+    scanner.stop().then(() => {
+      scanner.clear();
+      document.getElementById('reader').innerHTML = '';
+    }).catch(() => {});
+  } else {
+    scanning = false;
+  }
   document.getElementById('scanIdle').style.display = 'flex';
   document.getElementById('scanBtn').textContent = '📷 Start Scanner';
   document.getElementById('scanBtn').classList.remove('stop');
