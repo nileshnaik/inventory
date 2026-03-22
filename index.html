@@ -186,6 +186,21 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 .toast.wrn { background: #92400e; }
 .toast.ok  { background: var(--green); }
 .empty { text-align: center; padding: 30px 16px; color: var(--muted2); font-size: 13px; }
+
+/* NAME MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.hidden { display: none; }
+.modal { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.modal p { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+.modal input { width: 100%; padding: 13px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 16px; font-family: 'IBM Plex Sans', sans-serif; outline: none; margin-bottom: 12px; }
+.modal input:focus { border-color: var(--accent); }
+.modal-btns { display: flex; gap: 8px; }
+.modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+.modal-cancel { background: var(--surface2); color: var(--muted); }
+.modal-confirm { background: var(--accent); color: #fff; }
+.operator-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: var(--accent-light); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--accent); font-weight: 600; }
+.operator-bar span { cursor: pointer; text-decoration: underline; font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -209,6 +224,9 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 </div>
 
 <div id="statusBar" class="status-bar syncing">⏳ Connecting to Google Sheets…</div>
+<div class="operator-bar" id="operatorBar" style="display:none">
+  🔑 <strong id="operatorName"></strong> &nbsp;<span onclick="changeOperator()">Change</span>
+</div>
 
 <!-- UPDATE PAGE -->
 <div class="page active" id="page-scan">
@@ -306,8 +324,23 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
 
 <div class="toast" id="toast"></div>
 
+<!-- TEAM CODE MODAL -->
+<div class="modal-overlay hidden" id="nameModal">
+  <div class="modal">
+    <h3>🔑 Enter Your Team Code</h3>
+    <p id="modalMsg">Enter your 4-digit team member code to record this transaction.</p>
+    <input type="number" id="operatorInput" placeholder="e.g. 1001" inputmode="numeric" pattern="[0-9]*" autocomplete="off" style="font-size:24px;font-family:'IBM Plex Mono',monospace;letter-spacing:4px;text-align:center;">
+    <div id="modalError" style="color:var(--red);font-size:12px;margin:-6px 0 8px;display:none;">❌ Code not recognised. Please try again.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="cancelNameModal()">Cancel</button>
+      <button class="modal-confirm" onclick="submitName()">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW5d9w8dv1e1bi7XpmOhgBTriqQPMojoESX9LQ3sM6HchAkJ39r32HJmdtJt1j2v9h/exec';
+const TEAM_URL = 'https://script.google.com/macros/s/AKfycbwFTYxGGNUZeJwaFwNr7l91VNwWsqYVN5yk6xBAFY6msmOnMfJ36Z6wkjOzih0EUZD5/exec';
 
 const DEFAULT_INV = [
   { id:'VT47_031_1/1', name:'Ventec VT-47 0.031"', mfg:'Ventec', thickness:'0.031"', copper:'1oz/1oz',  barcode:'VT47031-1-1', panels:20, criticalPanels:10, reorderPanels:25 },
@@ -321,6 +354,9 @@ const DEFAULT_INV = [
 const KEY = 'pcb_lam_v5';
 let inv = [], txLog = [], selItem = null, currentMode = 'remove';
 let scanner = null, scanning = false;
+let currentOperator = JSON.parse(localStorage.getItem('pcb_operator') || 'null');
+let teamMembers = [];
+let pendingAction = null;
 
 function loadLocal() {
   try {
@@ -330,6 +366,19 @@ function loadLocal() {
   } catch { inv = JSON.parse(JSON.stringify(DEFAULT_INV)); txLog = []; }
 }
 function saveLocal() { localStorage.setItem(KEY, JSON.stringify({ inv, txLog })); }
+
+async function fetchTeam() {
+  try {
+    const res = await fetch(TEAM_URL);
+    const data = await res.json();
+    if (data.ok && data.data.length > 1) {
+      // Skip header row, map to {code, name, role, active}
+      teamMembers = data.data.slice(1)
+        .filter(r => String(r[3]).toUpperCase() !== 'FALSE' && r[0])
+        .map(r => ({ code: String(r[0]).trim(), name: String(r[1]).trim(), role: String(r[2]).trim() }));
+    }
+  } catch(e) { console.warn('Could not load team list', e); }
+}
 
 async function apiCall(params) {
   const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
@@ -381,8 +430,8 @@ async function updateSheetItem(item, newPanels) {
   try { await apiCall({ action: 'updateItem', id: item.id, panels: newPanels }); } catch(e) {}
 }
 
-async function logToSheet(item, action, qty, remaining) {
-  try { await apiCall({ action: 'logTransaction', id: item.id, name: item.name, action2: action, qty, remaining }); } catch(e) {}
+async function logToSheet(item, action, qty, remaining, operatorName, operatorCode) {
+  try { await apiCall({ action: 'logTransaction', id: item.id, name: item.name, action2: action, qty, remaining, operator: operatorName || '', operatorCode: operatorCode || '' }); } catch(e) {}
 }
 
 function setStatus(type, msg) {
@@ -531,12 +580,68 @@ async function confirmAction() {
   if (!selItem) return;
   const qty = parseInt(document.getElementById('removeQty').value);
   if (!qty || qty < 1) { toast('Enter a valid quantity', 'err'); return; }
+  if (!currentOperator) {
+    pendingAction = { qty, mode: currentMode };
+    showNameModal();
+    return;
+  }
+  await executeAction(qty, currentMode, currentOperator);
+}
+
+function showNameModal() {
+  document.getElementById('nameModal').classList.remove('hidden');
+  document.getElementById('operatorInput').value = '';
+  document.getElementById('modalError').style.display = 'none';
+  setTimeout(() => document.getElementById('operatorInput').focus(), 100);
+}
+
+function cancelNameModal() {
+  document.getElementById('nameModal').classList.add('hidden');
+  pendingAction = null;
+  document.getElementById('confirmBtn').disabled = false;
+}
+
+function submitName() {
+  const code = document.getElementById('operatorInput').value.trim();
+  if (!code) { document.getElementById('operatorInput').focus(); return; }
+  
+  // Validate against team list
+  const member = teamMembers.find(m => m.code === code);
+  if (!member) {
+    document.getElementById('modalError').style.display = 'block';
+    document.getElementById('operatorInput').value = '';
+    document.getElementById('operatorInput').focus();
+    return;
+  }
+
+  currentOperator = member;
+  localStorage.setItem('pcb_operator', JSON.stringify(member));
+  document.getElementById('nameModal').classList.add('hidden');
+  document.getElementById('modalError').style.display = 'none';
+  document.getElementById('operatorBar').style.display = 'flex';
+  document.getElementById('operatorName').textContent = member.name + ' (' + member.code + ')';
+  if (pendingAction) {
+    const { qty, mode } = pendingAction;
+    pendingAction = null;
+    executeAction(qty, mode, member);
+  }
+}
+
+function changeOperator() {
+  currentOperator = null;
+  localStorage.removeItem('pcb_operator');
+  document.getElementById('operatorBar').style.display = 'none';
+  toast('Code cleared — next action will ask for team code');
+}
+
+async function executeAction(qty, mode, member) {
+  if (!selItem) return;
   const idx = inv.findIndex(i => i.id === selItem.id);
   const btn = document.getElementById('confirmBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
   let newTotal;
-  if (currentMode === 'remove') {
+  if (mode === 'remove') {
     if (qty > inv[idx].panels) { toast('Not enough panels in stock!', 'err'); btn.disabled = false; setMode('remove'); return; }
     newTotal = inv[idx].panels - qty;
   } else {
@@ -544,20 +649,19 @@ async function confirmAction() {
   }
 
   inv[idx].panels = newTotal;
-  const action = currentMode === 'remove' ? 'Remove' : 'Add';
-  txLog.unshift({ id: selItem.id, name: selItem.name, copper: selItem.copper, mode: currentMode, qty, remaining: newTotal, time: new Date().toISOString() });
+  const action = mode === 'remove' ? 'Remove' : 'Add';
+  txLog.unshift({ id: selItem.id, name: selItem.name, copper: selItem.copper, mode, qty, remaining: newTotal, operator: member.name, operatorCode: member.code, time: new Date().toISOString() });
   if (txLog.length > 200) txLog.pop();
   selItem = inv[idx];
   saveLocal(); refreshDisplay(selItem);
 
-  // Sync to Google Sheets (background — non-blocking)
   updateSheetItem(selItem, newTotal);
-  logToSheet(selItem, action, qty, newTotal);
+  logToSheet(selItem, action, qty, newTotal, member.name, member.code);
 
-  btn.disabled = false; setMode(currentMode); document.getElementById('removeQty').value = 1; clearPresets();
+  btn.disabled = false; setMode(mode); document.getElementById('removeQty').value = 1; clearPresets();
 
-  if (currentMode === 'remove' && newTotal <= selItem.criticalPanels) toast(`⚠ LOW STOCK: ${selItem.name} — order now!`, 'wrn');
-  else if (currentMode === 'remove') toast(`✓ Removed ${qty} panel${qty > 1 ? 's' : ''} · ${newTotal} remaining`);
+  if (mode === 'remove' && newTotal <= selItem.criticalPanels) toast(`⚠ LOW STOCK: ${selItem.name} — order now!`, 'wrn');
+  else if (mode === 'remove') toast(`✓ Removed ${qty} panel${qty > 1 ? 's' : ''} · ${newTotal} remaining`);
   else toast(`✓ Added ${qty} panel${qty > 1 ? 's' : ''} · ${newTotal} in stock`, 'ok');
 }
 
@@ -606,7 +710,7 @@ function renderStock() {
     <div class="log-row">
       <div>
         <div class="log-name">${t.name} <span style="font-size:11px;color:var(--muted)">(${t.copper})</span></div>
-        <div class="log-det">${t.remaining} panels remaining · ${fmtTime(t.time)}</div>
+        <div class="log-det">${t.remaining} panels remaining · ${t.operator ? '👤 ' + t.operator + (t.operatorCode ? ' [' + t.operatorCode + ']' : '') + ' · ' : ''}${fmtTime(t.time)}</div>
       </div>
       <div class="log-rm ${t.mode}">${t.mode==='remove'?'−':'+'}${t.qty}</div>
     </div>`).join('');
@@ -707,6 +811,11 @@ document.getElementById('headerDate').textContent = new Date().toLocaleDateStrin
 updateHeaderSub();
 renderStock();
 syncFromSheet();
+fetchTeam();
+if (currentOperator) {
+  document.getElementById('operatorBar').style.display = 'flex';
+  document.getElementById('operatorName').textContent = currentOperator.name + ' (' + currentOperator.code + ')';
+}
 </script>
 </body>
 </html>
