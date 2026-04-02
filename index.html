@@ -217,9 +217,9 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
     <div class="header-date" id="headerDate"></div>
   </div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('scan',this)"><span class="ti">📷</span>Update</button>
-    <button class="nav-tab" onclick="showPage('stock',this)"><span class="ti">📦</span>Stock</button>
-    <button class="nav-tab" onclick="showPage('admin',this)"><span class="ti">⚙️</span>Admin</button>
+    <button class="nav-tab active" id="tab-scan" onclick="showPage('scan',this)"><span class="ti">📷</span>Update</button>
+    <button class="nav-tab" id="tab-stock" onclick="showPage('stock',this)"><span class="ti">📦</span>Stock</button>
+    <button class="nav-tab" id="tab-admin" onclick="requireManager('admin',this)" style="display:none"><span class="ti">⚙️</span>Admin</button>
   </div>
 </div>
 
@@ -330,7 +330,7 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: v
     <h3>🔑 Enter Your Team Code</h3>
     <p id="modalMsg">Enter your 4-digit team member code to record this transaction.</p>
     <input type="number" id="operatorInput" placeholder="e.g. 1001" inputmode="numeric" pattern="[0-9]*" autocomplete="off" style="font-size:24px;font-family:'IBM Plex Mono',monospace;letter-spacing:4px;text-align:center;">
-    <div id="modalError" style="color:var(--red);font-size:12px;margin:-6px 0 8px;display:none;">❌ Code not recognised. Please try again.</div>
+    <div id="modalError" style="color:var(--red);font-size:12px;margin:-6px 0 8px;display:none;"></div>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="cancelNameModal()">Cancel</button>
       <button class="modal-confirm" onclick="submitName()">Confirm</button>
@@ -588,11 +588,24 @@ async function confirmAction() {
   await executeAction(qty, currentMode, currentOperator);
 }
 
-function showNameModal() {
+function showNameModal(msg) {
   document.getElementById('nameModal').classList.remove('hidden');
   document.getElementById('operatorInput').value = '';
   document.getElementById('modalError').style.display = 'none';
+  if (msg) document.getElementById('modalMsg').textContent = msg;
+  else document.getElementById('modalMsg').textContent = 'Enter your 4-digit team member code to record this transaction.';
   setTimeout(() => document.getElementById('operatorInput').focus(), 100);
+}
+
+function requireManager(pageId, btn) {
+  // If already logged in as manager, go straight there
+  if (currentOperator && currentOperator.role && currentOperator.role.toLowerCase() === 'manager') {
+    showPage(pageId, btn);
+    return;
+  }
+  // Otherwise prompt for code
+  pendingAction = { type: 'pageNav', pageId, btn };
+  showNameModal('Admin access requires a Manager code.');
 }
 
 function cancelNameModal() {
@@ -604,14 +617,27 @@ function cancelNameModal() {
 function submitName() {
   const code = document.getElementById('operatorInput').value.trim();
   if (!code) { document.getElementById('operatorInput').focus(); return; }
-  
-  // Validate against team list
+
   const member = teamMembers.find(m => m.code === code);
   if (!member) {
-    document.getElementById('modalError').style.display = 'block';
+    const errEl = document.getElementById('modalError');
+    errEl.textContent = '❌ Code not recognised. Please try again.';
+    errEl.style.display = 'block';
     document.getElementById('operatorInput').value = '';
     document.getElementById('operatorInput').focus();
     return;
+  }
+
+  // For Admin page nav, require manager role
+  if (pendingAction && pendingAction.type === 'pageNav') {
+    if (member.role.toLowerCase() !== 'manager') {
+      const errEl = document.getElementById('modalError');
+      errEl.textContent = '❌ Admin access requires a Manager code.';
+      errEl.style.display = 'block';
+      document.getElementById('operatorInput').value = '';
+      document.getElementById('operatorInput').focus();
+      return;
+    }
   }
 
   currentOperator = member;
@@ -620,10 +646,20 @@ function submitName() {
   document.getElementById('modalError').style.display = 'none';
   document.getElementById('operatorBar').style.display = 'flex';
   document.getElementById('operatorName').textContent = member.name + ' (' + member.code + ')';
+
+  // Show Admin tab only for managers
+  if (member.role.toLowerCase() === 'manager') {
+    document.getElementById('tab-admin').style.display = 'flex';
+  }
+
   if (pendingAction) {
-    const { qty, mode } = pendingAction;
+    const action = pendingAction;
     pendingAction = null;
-    executeAction(qty, mode, member);
+    if (action.type === 'pageNav') {
+      showPage(action.pageId, action.btn);
+    } else {
+      executeAction(action.qty, action.mode, member);
+    }
   }
 }
 
@@ -631,6 +667,16 @@ function changeOperator() {
   currentOperator = null;
   localStorage.removeItem('pcb_operator');
   document.getElementById('operatorBar').style.display = 'none';
+  document.getElementById('tab-admin').style.display = 'none';
+  // If on admin page, redirect to stock
+  const adminPage = document.getElementById('page-admin');
+  if (adminPage.classList.contains('active')) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-stock').classList.add('active');
+    document.getElementById('tab-stock').classList.add('active');
+    renderStock();
+  }
   toast('Code cleared — next action will ask for team code');
 }
 
@@ -815,6 +861,9 @@ fetchTeam();
 if (currentOperator) {
   document.getElementById('operatorBar').style.display = 'flex';
   document.getElementById('operatorName').textContent = currentOperator.name + ' (' + currentOperator.code + ')';
+  if (currentOperator.role && currentOperator.role.toLowerCase() === 'manager') {
+    document.getElementById('tab-admin').style.display = 'flex';
+  }
 }
 </script>
 </body>
